@@ -1,0 +1,2 @@
+camera_info_publisher:darknet_ros/darknet_ros:darknet_ros/darknet_ros_msgs:styx:styx_msgs:tl_detector:twist_controller:waypoint_follower:waypoint_loader:waypoint_updater
+-DCMAKE_BUILD_TYPE=Release -DCATKIN_DEVEL_PREFIX=/capstone/ros/devel -DCMAKE_INSTALL_PREFIX=/capstone/ros/install -G Unix Makefiles
