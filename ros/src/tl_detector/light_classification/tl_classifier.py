@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from styx_msgs.msg import TrafficLight
+# from styx_msgs.msg import TrafficLight
 
 class TLClassifier(object):
     def __init__(self):
@@ -17,6 +17,4 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-        return TrafficLight.UNKNOWN
-
-        
+        return 4 #TrafficLight.UNKNOWN
