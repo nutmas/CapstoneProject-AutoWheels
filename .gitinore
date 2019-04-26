@@ -1,4 +1,4 @@
 *~
 *.pyc
-
+*.bag
 ipynb_checkpoints/
