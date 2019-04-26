@@ -5,7 +5,11 @@ from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+
+from darknet_ros_msgs.msg import BoundingBoxes, BoundingBox
+
+
+from cv_bridge import CvBridge, CvBridgeError
 from light_classification.tl_classifier import TLClassifier
 import tf
 import cv2
@@ -16,10 +20,14 @@ from scipy.spatial import KDTree
 import numpy as np
 
 STATE_COUNT_THRESHOLD = 3
+IMAGE_BUFFER_MAX_SIZE = 50  # simulator image_color has 10Hz, real world data ?
 
 class TLDetector(object):
     def __init__(self):
         rospy.init_node('tl_detector')
+
+        self.image_buffer = []
+        self.image_buffer_seq = []
 
         self.pose = None
         self.waypoints = None
@@ -37,6 +45,9 @@ class TLDetector(object):
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
+        # bounding box detection subscriber
+        sub_bb = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.bounding_boxes_cb, queue_size=1)
+
         '''
         /vehicle/traffic_lights provides you with the location of the traffic light in 3D map space and
         helps you acquire an accurate ground truth data source for the traffic light
@@ -45,12 +56,14 @@ class TLDetector(object):
         rely on the position of the light and the camera image to predict it.
         '''
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        #sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+
+        self.traffic_crop_pub = rospy.Publisher('/traffic_crop', Image, queue_size=1)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -63,6 +76,14 @@ class TLDetector(object):
 
         rospy.spin()
 
+    def add_image_to_buffer(self, msg):
+        self.image_buffer.append(msg)
+        self.image_buffer_seq.append(msg.header.seq)
+        while len(self.image_buffer_seq) > IMAGE_BUFFER_MAX_SIZE:
+            self.image_buffer.pop(0)
+            self.image_buffer_seq.pop(0)
+
+        
     def pose_cb(self, msg):
         self.pose = msg
 
@@ -98,11 +119,27 @@ class TLDetector(object):
         pass
 
 
+    def bounding_boxes_cb(self, msg):
+        # get image from reference
+        try:
+            idx = self.image_buffer_seq.index(msg.image_header.seq)
+            image = self.image_buffer[idx]
+            im = self.bridge.imgmsg_to_cv2(image, "bgr8")
+        except ValueError:
+            rospy.logwarn('image with seq {} not in buffer'.format(msg.image_header.seq))
+            return
+        # process all bounding boxes in message
+        for bb in msg.bounding_boxes:
+            # if detection was not of traffic light, ignore
+            if bb.Class != "traffic light":
+                continue
 
-
-
-
-
+            # publish detection crop
+            croped_detection = im[bb.ymin:bb.ymax, bb.xmin:bb.xmax]
+            try:
+                self.traffic_crop_pub.publish(self.bridge.cv2_to_imgmsg(croped_detection, "bgr8"))
+            except CvBridgeError as e:
+                rospy.logerror(e)
 
 
     def traffic_cb(self, msg):
@@ -144,6 +181,8 @@ class TLDetector(object):
         """
         self.has_image = True
         self.camera_image = msg
+        self.add_image_to_buffer(msg)
+        
         light_wp, state = self.process_traffic_lights()
 
         '''
