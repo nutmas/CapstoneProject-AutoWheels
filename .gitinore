@@ -1,6 +1,10 @@
+
+
+
 *~
 *.pyc
 *.bag
 ipynb_checkpoints/
 ros/devel/
 ros/build/
+data/
