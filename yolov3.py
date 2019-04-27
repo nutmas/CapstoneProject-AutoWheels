@@ -12,4 +12,3 @@ out, err = process.communicate(commands.encode('utf-8'))
 print(out.decode('utf-8'))
 
 
-
