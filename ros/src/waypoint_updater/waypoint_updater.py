@@ -25,6 +25,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
 MAX_DECEL = .5 #
 
+
 class WaypointUpdater(object):
     def __init__(self):
         rospy.init_node('waypoint_updater')
@@ -36,10 +37,16 @@ class WaypointUpdater(object):
         self.waypoints_2d    = None
         self.waypoint_tree   = None
 
-        rospy.Subscriber('/current_pose'    , PoseStamped, self.pose_cb)
-        rospy.Subscriber('/base_waypoints'  , Lane       , self.waypoints_cb)
-        rospy.Subscriber('/traffic_waypoint', Int32      , self.traffic_cb)
+        # wait until subscibers are ready
+        rospy.wait_for_message('/current_pose', PoseStamped)
+        rospy.wait_for_message('/base_waypoints', Lane)
+        rospy.wait_for_message('/traffic_waypoint', Int32)
+
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
+        rospy.Subscriber('/current_pose'     , PoseStamped, self.pose_cb     , queue_size=1)
+        rospy.Subscriber('/base_waypoints'   , Lane       , self.waypoints_cb, queue_size=None)
+        rospy.Subscriber('/traffic_waypoint' , Int32      , self.traffic_cb  , queue_size=None)
+        rospy.Subscriber('/obstacle_waypoint', Int32      , self.traffic_cb  , queue_size=None)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -48,7 +55,7 @@ class WaypointUpdater(object):
     def loop(self):
         rate = rospy.Rate(50)
         while not rospy.is_shutdown():
-            if self.pose and self.base_lane:
+            if self.pose and self.waypoint_tree: # and self.base_lane:
                 self.publish_waypoints()
             rate.sleep()
 
