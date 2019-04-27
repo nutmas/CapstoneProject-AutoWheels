@@ -1,0 +1,15 @@
+# ros build process
+/ros/build/
+/ros/devel/
+
+# data
+/data/bags
+
+
+# extensions
+*.pyc
+
+# temp files
+**#
+**~
+.ipynb_checkpoints/
