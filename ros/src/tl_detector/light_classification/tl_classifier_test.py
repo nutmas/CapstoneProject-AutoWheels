@@ -6,7 +6,8 @@ from tl_classifier import TLClassifier
 from sets import Set
 
 # The path to the hand cropped testing image files.
-TL_TESTING_IMAGES_RELATIVE_PATH = os.path.join(os.getcwd(), "traffic_light_testing_images" )
+TL_SIM_IMAGES_RELATIVE_PATH = os.path.join(os.getcwd(), "traffic_light_sim_images" )
+TL_REAL_IMAGES_RELATIVE_PATH = os.path.join(os.getcwd(), "traffic_light_real_images" )
 
 def read_training_data(base_path):
 	"""Reads in all testing images and labels from files at base path.
@@ -23,11 +24,13 @@ def read_training_data(base_path):
 	training_images = []
 	image_ids = Set()
 	for file in os.listdir(base_path):
+		if ".jpg" not in file:
+			continue
 		image_id, color = parse_label_from_image_name(file)
 		# Ensures that the same image is never reused.
 		assert image_id not in image_ids
 		image_ids.add(image_id)
-		training_images.append([cv2.imread(os.path.join(TL_TESTING_IMAGES_RELATIVE_PATH, file)), image_id, color])
+		training_images.append([cv2.imread(os.path.join(base_path, file)), image_id, color])
 	return training_images
 
 def parse_label_from_image_name(image_name):
@@ -74,12 +77,23 @@ def get_color_name(color_int):
 	return color_int_map.get(color_int, "UNKNOWN")
 
 def main():
-	testing_data = read_training_data(TL_TESTING_IMAGES_RELATIVE_PATH)
+	real_data = read_training_data(TL_REAL_IMAGES_RELATIVE_PATH)
 	clf = TLClassifier()
 	labels = []
 	predictions = []
-	print "Testing"
-	for image, image_id, color_label in testing_data:
+	print "Real"
+	for image, image_id, color_label in real_data:
+		color_prediction = clf.get_classification(image)
+		labels.append(color_label)
+		predictions.append(color_prediction)
+
+		print ("Image: ", image_id, 
+			   " Label: ", get_color_name(color_label), 
+			   " Prediction: ", get_color_name(color_prediction))
+
+	sim_data = read_training_data(TL_SIM_IMAGES_RELATIVE_PATH)
+	print "Simulation"
+	for image, image_id, color_label in sim_data:
 		color_prediction = clf.get_classification(image)
 		labels.append(color_label)
 		predictions.append(color_prediction)

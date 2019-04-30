@@ -22,8 +22,8 @@ class TLClassifier(object):
         """
 
         # Uncomment to show original image.
-        # cv2.imshow("Image", image)
-        # cv2.waitKey()
+        cv2.imshow("Image", image)
+        cv2.waitKey()
 
         # Crop the input image to a consistent shape.
         image = cv2.resize(image, (self.crop_size, self.crop_size))
@@ -36,8 +36,8 @@ class TLClassifier(object):
         retval, thresholded = cv2.threshold(value,  120, 255, cv2.THRESH_BINARY)
 
         # Uncomment to show thresholded value channel of HSV image.
-        # cv2.imshow("Thresh", thresholded)
-        # cv2.waitKey(0)
+        cv2.imshow("Thresh", thresholded)
+        cv2.waitKey(0)
 
         # Slice the traffic light to middle top and bottom.
         top_red = thresholded[self.top_margin: self.crop_size / 3,
