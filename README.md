@@ -5,7 +5,7 @@ The goal of the final Udacity Capstone project was to program a real self drivin
 Team AutoWheels has five memembers. Below are their names, email addresses and slack handles.
 
 Team Member Name | Email Address | Slack Handle 
------------- | -------------
+------------ | ------------- | -------------
 Diogo Silva (Team Lead) | akins.daos+selfdriving@gmail.com | @diogoaos
 Volker van Aken | volker.van.aken@gmail.com | @Volker
 Andreea Patachi | patachiandreea@yahoo.com | @Andreea	
