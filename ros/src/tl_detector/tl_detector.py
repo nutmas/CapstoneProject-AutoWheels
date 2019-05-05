@@ -12,6 +12,10 @@ import cv2
 import yaml
 import os
 
+
+import actionlib
+import darknet_ros_msgs.msg as darknet_msgs
+
 # use for search nearest waypoint
 from scipy.spatial import KDTree
 
@@ -51,6 +55,10 @@ class TLDetector(object):
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
+        # darknet 
+        self.darknet_client = actionlib.SimpleActionClient('/darknet_ros/check_for_objects', darknet_msgs.CheckForObjectsAction)
+        self.darknet_goal_id = 0
+
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
@@ -59,6 +67,10 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+
+        # wait for darknet classifier to bootup
+        self.darknet_client.wait_for_server()
+        
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -156,8 +168,41 @@ class TLDetector(object):
         #Get classification
         #return self.light_classifier.get_classification(cv_image)
 
+        # if there is no image, return UNKNOWN
+        if not self.has_image:
+            return 4
+
+        # create darknet goal with received image
+        goal = darknet_msgs.CheckForObjectsGoal()
+        goal.image = self.camera_image
+        goal.id = self.darknet_goal_id
+        self.darknet_goal_id += 1
+
+        # send goal and wait for result
+        self.darknet_client.send_goal(goal)
+        self.darknet_client.wait_for_result()
+        res = self.darknet_clientclient.get_result()  # result is BoundingBoxes message
+
+        # traffic light states in correct order for return code 0 (red), 1(yellow), 2(green)
+        colors = ['red', 'yellow', 'green']
+
+        # compile valid detections
+        det = [bb.Class for bb in res.bounding_boxes if bb.Class in colors]
+
+        # if no valid detections, unknown state
+        if len(det) == 0:
+            return 4 # UNKNOWN
+
+        # get the number of detections for each color and sort them
+        counts = [(color, det.count(color)) for color in colors]
+        counts = sorted(counts, key=lambda t: t[1])
+        most_frequent = counts[-1]
+        state_code = colors.index(most_frequent[0])
+
+        return state_code
+        
         # for testing return light state
-        return light.state
+        # return light.state
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
