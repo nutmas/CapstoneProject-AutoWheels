@@ -15,36 +15,30 @@ Alexander Meade | alexander.n.meade@gmail.com | @ameade
 
 ## Traffic Light Detection and Classification
 
-The first approach was to use a off-the-shelf detector (YOLO) to detect the traffic lights.
-Simulator detections were very good.
-For OpenCV based classifier was developed to work over the YOLO detections.
-This system performed well on simulator, but not on track data.
-Off-the-shelf detection on the track data (from provided ROS bag) was poor.
-But OpenCV classification was also much harder.
-It became clear that
- 1) we would need to train the detector with track data; and
- 2) an OpenCV classifier would not work on track data.
+The first approach was to use a off-the-shelf detector (YOLO) to detect the bounding boxes of traffic lights.
+The simulator detections for the YOLO bounding boxes were very good. We had hoped to combine these detections with a simple OpenCV approach to light classifications. This end to end system worked very well in simulation, but not on track data. The off-the-shelf YOLO detection on the track data (from provided ROS bag) was poor. The OpenCV approach had an even more difficult time with the real track data due to the bright lighting conditions. We decided it would be better and more reliable to learn a model to classify the light colors rather than try to account for the brightness differences in OpenCV. It was clear that we would need to train a detector and classifier with both simulation and real track data. Along these lines we had two distinct approaches: 
 
-We moved on to train networks with both simulator and track data.
-We trained the networks to detect new classes.
-Instead of detecting `traffic light` they would detect either `red`, `green` or `yellow`.
-This model would integrate in one what was once a seperate detector and classifier.
+1. Train two models, one for traffic light bounding box detection and another for traffic light color classification. These were the YOLO and Darknet models respectively and fed inputs into one another.
+
+2. Create a single model the integrated detection and light classification.
 
 ### Annotating data
-For the simulator data we used the off-the-shelf YOLO detections of traffic lights along with the OpenCV classifier to compile the dataset.
-Then we manually removed false positives and corrected bad labels.
-
-For the track data, we manually annotated the images using [LabelImg](https://github.com/tzutalin/labelImg) and [Yolo_mark](https://github.com/AlexeyAB/Yolo_mark).
+For the simulator data we used the off-the-shelf YOLO detections of traffic lights along and the OpenCV classifier to compile a training dataset. We manually exammined this training set correcting any false positives or bad labels. For generating a training set from track data, we manually annotated the images using [LabelImg](https://github.com/tzutalin/labelImg) and [Yolo_mark](https://github.com/AlexeyAB/Yolo_mark).
 
 ### Training
 We used pre-trained networks to accelerate training and increase performance.
 Two networks were used: YOLOv3 and X.
 The final solution used Y.
 
-### YOLOv3
+### OpenCV
+The OpenCV approach included in tl_classifier.py further cropped and resized the input images and converted them from BRG to HSV. The V componenet of the image was binary thresholded and the image was split into top, middle and bottom components corresponding to the red, yellow and green lights. The section with the largest greater than zero count determined the light color. This was inspired by the reference blog included below.
 
+### YOLOv3 and Darknet
+TODO(Volker, Diogo): Discuss your two part training approach using YOLO and Darknet.
 
+### End to End Net
 
+TODO(Steve): Discuss your end to end model approach for cropping and classification.
 
 ### References
 
@@ -78,6 +72,12 @@ https://github.com/leggedrobotics/darknet_ros
 ### prepare dataset for YOLO
 https://medium.com/@manivannan_data/how-to-train-yolov3-to-detect-custom-objects-ccbcafeb13d2
 
+### OpenCV Python Traffic Light Detection Blog
+https://qtmbits.com/traffic-light-classifier-using-python-and-opencv/
+
+## Self Driving Car Control
+
+TODO(ameade): Discuss our approaches to controlling the self driving car.
 
 # Usage Instructions
 
