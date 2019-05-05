@@ -77,7 +77,21 @@ https://qtmbits.com/traffic-light-classifier-using-python-and-opencv/
 
 ## Self Driving Car Control
 
-TODO(ameade): Discuss our approaches to controlling the self driving car.
+A lot of the control and waypoint following for our self-driving car was re-used from the walk-through code. The walk-through provided a great starting point. That being said, there were some key changes that improved performance that are worth highlighting below.
+
+* Update the waypoint follower so that the `PurePursuit::verifyFollowing()` always returned false. This helped prevent the car from wandering in the lane. This is because previously the function calculated if the car was "close enough" to the waypoints in which case it would follow the previous control inputs resulting. This change made the car always follow the most recent inputs.
+
+* Updated the waypoint updater `decelerate_waypoints()` function so that it accepted the stop waypoint index as an argument. This prevented the waypoint node from crashing randomly due to an edge case where the code passed the `stop_wp_idx_temp >= farthest_idx` check in generate lane and then received a /traffic_waypoint update in the middle of calculating the deceleration waypoints resulting in an out of bounds exception at the worst. At the best it resulted in decelerion waypoints calculated using multiple stop locations.
+
+* Updated the twist controller steering PID parameters to improve performance around the curves. The final values of were the following (KP = 0.9, KI = 0.007, KD = 0.2, MN = 0.0, MX = 0.2).
+
+* Updated the total vehicle mass calculation in the twist controller to include the mass contributed by the current fuel levels. While this was impossible to test in simulation it should help provide more accurate braking torques when decelerating the vehicle on the track.
+
+* Changed the idle vehicle stop brake torque within twist controller to a ros server param `~stop_brake_torque`. This allowed us to more easily adjusted the Nm torque applied in simulation and real life to 400 Nm and 700 Nm respectively.
+
+### Simulation Inconsistency
+
+Our team struggled a lot with reproducing controller results in simulation. This is because the Udacity workspace's, the VMs and our personal machines all had different performance specs. If the machine ran slower for any period of time the car would stop following the waypoints and drive out of bounds. This was especially prevalent in the Udacity workspace environemnt. These students experienced similar issues [here](https://knowledge.udacity.com/questions/39086).
 
 # Usage Instructions
 
