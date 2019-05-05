@@ -11,7 +11,7 @@ ONE_MPH = 0.44704
 class Controller(object):
     def __init__(self, vehicle_mass, fuel_capacity, brake_deadband,
                  decel_limit, accel_limit, wheel_radius, wheel_base, steer_ratio,
-                 max_lat_accel, max_steer_angle):
+                 max_lat_accel, max_steer_angle, stop_brake_torque):
 
         self.yaw_controller = YawController(wheel_base, steer_ratio, ONE_MPH, max_lat_accel, max_steer_angle)
 
@@ -33,6 +33,7 @@ class Controller(object):
         self.decel_limit = decel_limit
         self.accel_limit = accel_limit
         self.wheel_radius = wheel_radius
+        self.stop_brake_torque = stop_brake_torque
         self.last_time = rospy.get_time()
 
     def control(self, current_vel, dbw_enabled, linear_vel, angular_vel):
@@ -56,7 +57,7 @@ class Controller(object):
         
         if linear_vel == 0.0 and current_vel < 0.1:
             throttle = 0
-            brake = 400 # Nm
+            brake = self.stop_brake_torque # Nm
         elif throttle < 0.1 and vel_error < 0:
             throttle = 0.0
             decel = max(vel_error, self.decel_limit)
