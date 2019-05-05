@@ -31,7 +31,7 @@ Two networks were used: YOLOv3 and X.
 The final solution used Y.
 
 ### OpenCV
-The OpenCV approach included in tl_classifier.py further cropped and resized the input images and converted them from BRG to HSV. The V componenet of the image was binary thresholded and the image was split into top, middle and bottom components corresponding to the red, yellow and green lights. The section with the largest greater than zero count determined the light color. This was inspired by the reference blog included below. We also tried experiementing with Hough circles in OpenCV, but the results were not consistent in that a circle was not always detected.
+The OpenCV approach included in tl_classifier.py further cropped and resized the input images and converted them from BRG to HSV. The V componenet of the image was binary thresholded and the image was split into top, middle and bottom components corresponding to the red, yellow and green lights. The section with the largest greater than zero count determined the light color. This was inspired by the reference [blog](https://qtmbits.com/traffic-light-classifier-using-python-and-opencv/) included below. We also tried experiementing with Hough circles in OpenCV, but the results were not consistent in that a circle was not always detected.
 
 ### YOLOv3 and Darknet
 TODO(Volker, Diogo): Discuss your two part training approach using YOLO and Darknet.
