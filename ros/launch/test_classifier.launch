@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+    <!--Traffic Light Detector Node -->
+    <include file="$(find tl_detector)/launch/tl_detector.launch"/>
+
+    <!--Traffic Light Locations and Camera Config -->
+    <param name="traffic_light_config" textfile="$(find tl_detector)/sim_traffic_light_config.yaml" />
+
+    <!-- DARKNET YOLO LAUNCH  -->
+    <include file="$(find darknet_ros)/launch/darknet_ros.launch"/>
+    
+</launch>

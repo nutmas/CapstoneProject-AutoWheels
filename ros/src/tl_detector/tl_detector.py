@@ -11,6 +11,7 @@ import tf
 import cv2
 import yaml
 import os
+import time
 
 
 import actionlib
@@ -116,6 +117,8 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
+        rospy.logwarn('current state is: {}'.format(state))
+        
 
         '''
         Publish upcoming red lights at camera frequency.
@@ -172,6 +175,7 @@ class TLDetector(object):
         if not self.has_image:
             return 4
 
+        t_start = time.time()
         # create darknet goal with received image
         goal = darknet_msgs.CheckForObjectsGoal()
         goal.image = self.camera_image
@@ -181,13 +185,16 @@ class TLDetector(object):
         # send goal and wait for result
         self.darknet_client.send_goal(goal)
         self.darknet_client.wait_for_result()
-        res = self.darknet_clientclient.get_result()  # result is BoundingBoxes message
+        result = self.darknet_client.get_result()  # result is BoundingBoxes message
+
+        t_total = time.time() - t_start
+        rospy.logwarn('classification time = {}'.format(t_total))
 
         # traffic light states in correct order for return code 0 (red), 1(yellow), 2(green)
         colors = ['red', 'yellow', 'green']
 
         # compile valid detections
-        det = [bb.Class for bb in res.bounding_boxes if bb.Class in colors]
+        det = [bb.Class for bb in result.bounding_boxes.bounding_boxes if bb.Class in colors]
 
         # if no valid detections, unknown state
         if len(det) == 0:
