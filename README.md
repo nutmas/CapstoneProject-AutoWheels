@@ -16,7 +16,14 @@ Alexander Meade | alexander.n.meade@gmail.com | @ameade
 ## Traffic Light Detection and Classification
 
 The first approach was to use a off-the-shelf detector (YOLO) to detect the bounding boxes of traffic lights.
-The simulator detections for the YOLO bounding boxes were very good. We had hoped to combine these detections with a simple OpenCV approach to light classifications. This end to end system worked very well in simulation, but not on track data. The off-the-shelf YOLO detection on the track data (from provided ROS bag) was poor. The OpenCV approach had an even more difficult time with the real track data due to the bright lighting conditions. We decided it would be better and more reliable to learn a model to classify the light colors rather than try to account for the brightness differences in OpenCV. It was clear that we would need to train a detector and classifier with both simulation and real track data. Along these lines we had two distinct approaches: 
+The simulator detections for the YOLO bounding boxes were very good.
+We had hoped to combine these detections with a simple OpenCV approach to light classifications.
+This end to end system worked very well in simulation, but not on track data.
+The off-the-shelf YOLO detection on the track data (from provided ROS bag) was poor.
+The OpenCV approach had an even more difficult time with the real track data due to the bright lighting conditions.
+We decided it would be better and more reliable to learn a model to classify the light colors rather than try to account for the brightness differences in OpenCV.
+It was clear that we would need to train a detector and classifier with both simulation and real track data.
+Along these lines we had two distinct approaches: 
 
 1. Train two models, one for traffic light bounding box detection and another for traffic light color classification. These were the YOLO and Darknet models respectively and fed inputs into one another.
 
@@ -33,8 +40,37 @@ The final solution used Y.
 ### OpenCV
 The OpenCV approach included in tl_classifier.py further cropped and resized the input images and converted them from BRG to HSV. The V componenet of the image was binary thresholded and the image was split into top, middle and bottom components corresponding to the red, yellow and green lights. The section with the largest greater than zero count determined the light color. This was inspired by the reference [blog](https://qtmbits.com/traffic-light-classifier-using-python-and-opencv/) included below. We also tried experiementing with Hough circles in OpenCV, but the results were not consistent in that a circle was not always detected.
 
-### YOLOv3 and Darknet
-TODO(Volker, Diogo): Discuss your two part training approach using YOLO and Darknet.
+### YOLOv3 and darknet_ros
+#### YOLOv3
+YOLO (You Only Look Once) is known to be a fast algorithm for object detection.
+YOLOv2 improved on the original algorithm by being faster and more accurate.
+YOLOv3 sacrificed speed for better accuracy.
+While slower, the authors report 30 FPS in a Titan X, similar to the GPU installed in CARLA.
+Furthermore, 30FPS is a processing speed higher then the publish frequency for the image feed in both the simulator and provided ROS bags.
+Thus YOLOv3, pretrained on COCO dataset, was a good fit for this project.
+Furthermore, a ROS package (_darknet_ros_) that made YOLO easily available in the the environment was available, which also sped up development.
+
+YOLOv3 is built on a 53 layer network trained on imagenet (_darknet-53_), on top of which 53 more layers are added for object detection.
+Contrary to its predecessor, YOLOv3 uses both skip connections and upsampling layers, resulting in a fully convolutional model.
+Detection is done at 3 different places in the network, using features at different scales.
+This feature of the model helps with detection of small objects.
+
+A full architecture of the underlying model can be observed in the image below.
+
+![YOLOv3 underlying architecture (taken from https://towardsdatascience.com/yolo-v3-object-detection-53fb7d3bfe6b)](yolov3.png)
+
+#### darknet_ros and tl_detector logic
+After training the model with the data for this project, the integration was done through the darknet_ros package and some simple logic in `tl_detector.py`.
+
+darknet_ros already has a ROS action server implemented.
+In `tl_detector.py`, we implemented an action client.
+Each time an image was received, a Action Goal containing that image was sent to darknet_ros.
+The response was a Action Result containing the object detections.
+
+Since multiple traffic lights could be detected, the final state was given by the traffic light state that was most prevalent.
+For example, if 2 red lights and 1 yellow were detected, the final state would be corresponding to the red light.
+This logic worked well.
+Videos of the performance can be seen in the Results section.
 
 ### End to End Net
 
@@ -58,6 +94,12 @@ A lot of the control and waypoint following for our self-driving car was re-used
 
 Our team struggled a lot with reproducing controller results in simulation. This is because the Udacity workspace's, the VMs and our personal machines all had different performance specs. If the machine ran slower for any period of time the car would stop following the waypoints and drive out of bounds. This was especially prevalent in the Udacity workspace environemnt. These students experienced similar issues [here](https://knowledge.udacity.com/questions/39086).
 
+## Results
+The performance of solution in one lap of the simulator was recorded and published on Youtube (https://youtu.be/p0Jgx_Gc7sg).
+The video was accelerated 3x.
+YOLO was trained on around 4000 images for 7000 epochs.
+The same model was tested on track images. A video was recorded and published on Youtube (https://youtu.be/Cov7dlHjFko).
+
 ## References
 
 #### Links
@@ -68,98 +110,7 @@ Our team struggled a lot with reproducing controller results in simulation. This
 * [darknet_ros](https://github.com/leggedrobotics/darknet_ros)
 
 #### Article Citations
-@article{yolov3,
-  title={YOLOv3: An Incremental Improvement},
-  author={Redmon, Joseph and Farhadi, Ali},
-  journal = {arXiv},
-  year={2018}
-}
+Redmon, J. and Farhadi, A., 2018. Yolov3: An incremental improvement. arXiv preprint arXiv:1804.02767. [YOLOv3 article](https://pjreddie.com/media/files/papers/YOLOv3.pdf)
 
-@article{opencv_library,
-    author = {Bradski, G.},
-    citeulike-article-id = {2236121},
-    journal = {Dr. Dobb's Journal of Software Tools},
-    keywords = {bibtex-import},
-    posted-at = {2008-01-15 19:21:54},
-    priority = {4},
-    title = {{The OpenCV Library}},
-    year = {2000}
-}
+Bradski, G., The OpenCV Library. Dr. Dobb's Journal of Software Tools , (2000). [OpenCV](https://opencv.org/)
 
-
-# Usage Instructions
-
-This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
-
-Please use **one** of the two installation options, either native **or** docker installation.
-
-## Native Installation
-
-* Be sure that your workstation is running Ubuntu 16.04 Xenial Xerus or Ubuntu 14.04 Trusty Tahir. [Ubuntu downloads can be found here](https://www.ubuntu.com/download/desktop).
-* If using a Virtual Machine to install Ubuntu, use the following configuration as minimum:
-  * 2 CPU
-  * 2 GB system memory
-  * 25 GB of free hard drive space
-
-  The Udacity provided virtual machine has ROS and Dataspeed DBW already installed, so you can skip the next two steps if you are using this.
-
-* Follow these instructions to install ROS
-  * [ROS Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu) if you have Ubuntu 16.04.
-  * [ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu) if you have Ubuntu 14.04.
-* [Dataspeed DBW](https://bitbucket.org/DataspeedInc/dbw_mkz_ros)
-  * Use this option to install the SDK on a workstation that already has ROS installed: [One Line SDK Install (binary)](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/81e63fcc335d7b64139d7482017d6a97b405e250/ROS_SETUP.md?fileviewer=file-view-default)
-* Download the [Udacity Simulator](https://github.com/udacity/CarND-Capstone/releases).
-
-## Docker Installation
-[Install Docker](https://docs.docker.com/engine/installation/)
-
-Build the docker container
-```bash
-docker build . -t capstone
-```
-
-Run the docker file
-```bash
-docker run -p 4567:4567 -v $PWD:/capstone -v /tmp/log:/root/.ros/ --rm -it capstone
-```
-
-## Port Forwarding
-To set up port forwarding, please refer to the [instructions from term 2](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/16cf4a78-4fc7-49e1-8621-3450ca938b77)
-
-## Usage
-
-1. Clone the project repository
-```bash
-git clone https://github.com/udacity/CarND-Capstone.git
-```
-
-2. Install python dependencies
-```bash
-cd CarND-Capstone
-pip install -r requirements.txt
-```
-3. Make and run styx
-```bash
-cd ros
-catkin_make
-source devel/setup.sh
-roslaunch launch/styx.launch
-```
-4. Run the simulator
-
-## Real world testing
-1. Download [training bag](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/traffic_light_bag_file.zip) that was recorded on the Udacity self-driving car.
-2. Unzip the file
-```bash
-unzip traffic_light_bag_file.zip
-```
-3. Play the bag file
-```bash
-rosbag play -l traffic_light_bag_file/traffic_light_training.bag
-```
-4. Launch your project in site mode
-```bash
-cd CarND-Capstone/ros
-roslaunch launch/site.launch
-```
-5. Confirm that traffic light detection works on real life images
