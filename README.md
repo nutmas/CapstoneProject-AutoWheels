@@ -57,8 +57,8 @@ This feature of the model helps with detection of small objects.
 
 A full architecture of the underlying model can be observed in the image below.
 
-![YOLOv3 underlying architecture (taken from https://towardsdatascience.com/yolo-v3-object-detection-53fb7d3bfe6b)](yolov3.png)
-
+![YOLOv3 underlying architecture diagram](yolov3.png)
+YOLOv3 underlying architecture (taken from [here](https://towardsdatascience.com/yolo-v3-object-detection-53fb7d3bfe6b)).
 #### darknet_ros and tl_detector logic
 After training the model with the data for this project, the integration was done through the darknet_ros package and some simple logic in `tl_detector.py`.
 
