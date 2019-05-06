@@ -35,7 +35,9 @@ class TLDetector(object):
         self.waypoint_tree = None
 
         # wait until subscibers are ready
+        rospy.logwarn('waiting for current pose message...')
         rospy.wait_for_message('/current_pose', PoseStamped)
+        rospy.logwarn('waiting for base waypoints...')
         rospy.wait_for_message('/base_waypoints', Lane)
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
@@ -70,6 +72,7 @@ class TLDetector(object):
         self.state_count = 0
 
         # wait for darknet classifier to bootup
+        rospy.logwarn('waiting for darknet action server...')
         self.darknet_client.wait_for_server()
         
         rospy.spin()
@@ -184,6 +187,7 @@ class TLDetector(object):
 
         # send goal and wait for result
         self.darknet_client.send_goal(goal)
+        #rospy.logwarn('waiting for darknet action result...')
         self.darknet_client.wait_for_result()
         result = self.darknet_client.get_result()  # result is BoundingBoxes message
 
