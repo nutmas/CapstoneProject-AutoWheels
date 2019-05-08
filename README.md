@@ -25,17 +25,13 @@ We decided it would be better and more reliable to learn a model to classify the
 It was clear that we would need to train a detector and classifier with both simulation and real track data.
 Along these lines we had two distinct approaches: 
 
-1. Train two models, one for traffic light bounding box detection and another for traffic light color classification. These were the YOLO and Darknet models respectively and fed inputs into one another.
+1. The YOLO object detection system, pre-trained on the COCO dataset with 80 classes, including traffic lights.
+2. Use a pre-trained model using the Tensorflow framework and expand it to not only detect traffic lights but also classify their state.
 
-2. Create a single model the integrated detection and light classification.
+Although both approaches were explored and developed, the YOLO system was used for the final solution.
 
 ### Annotating data
 For the simulator data we used the off-the-shelf YOLO detections of traffic lights along and the OpenCV classifier to compile a training dataset. We manually exammined this training set correcting any false positives or bad labels. For generating a training set from track data, we manually annotated the images using [LabelImg](https://github.com/tzutalin/labelImg) and [Yolo_mark](https://github.com/AlexeyAB/Yolo_mark).
-
-### Training
-We used pre-trained networks to accelerate training and increase performance.
-Two networks were used: YOLOv3 and X.
-The final solution used Y.
 
 ### OpenCV
 The OpenCV approach included in tl_classifier.py further cropped and resized the input images and converted them from BRG to HSV. The V componenet of the image was binary thresholded and the image was split into top, middle and bottom components corresponding to the red, yellow and green lights. The section with the largest greater than zero count determined the light color. This was inspired by the reference [blog](https://qtmbits.com/traffic-light-classifier-using-python-and-opencv/) included below. We also tried experiementing with Hough circles in OpenCV, but the results were not consistent in that a circle was not always detected.
