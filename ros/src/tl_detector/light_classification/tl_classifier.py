@@ -1,74 +1,97 @@
-import cv2
+from styx_msgs.msg import TrafficLight
+import rospy
+
+#import tensorflow as tf
 import numpy as np
-# from styx_msgs.msg import TrafficLight
+import time
+
+# for darknet
+import actionlib
+import darknet_ros_msgs.msg as darknet_msgs
+
+#-----------------------------------------------------------------------------------------------------
 
 class TLClassifier(object):
+
     def __init__(self):
-        # Size to crop all input images to for both height and width.
-        self.crop_size = 64
-        self.top_margin = 4
-        self.side_margin = 10
-        pass
+        
+        # darknet implementation
+        # create a darknet client to send messages to classifier
+        self.darknet_client = actionlib.SimpleActionClient('/darknet_ros/check_for_objects', darknet_msgs.CheckForObjectsAction)
+        # ????
+        self.darknet_goal_id = 0
+        
+        
+        # console indicator to understand status of darknet
+        # rospy.logwarn('waiting for darknet action server...')
+        # ready for server
+        self.darknet_client.wait_for_server()
 
-    def get_classification(self, image):
-        """Determines the color of the traffic light in the image.
+# -----------------------------------------------------------------------------------------------------
 
-        Args:
-            image (cv::Mat): image containing the traffic light
+    def get_classification(self,rx_image):
 
-        Returns:
-            int: ID of traffic light color (specified in styx_msgs/TrafficLight).
+        # Determines the color of the traffic light in the image
+        
+        # log start time
+        t_start = time.time()
+        # create darknet goal with received image
+        goal = darknet_msgs.CheckForObjectsGoal()
+        goal.image = rx_image
+        goal.id = self.darknet_goal_id
+        self.darknet_goal_id += 1
+        
+        
+        
+        # send goal and wait for result
+        self.darknet_client.send_goal(goal)
+        #rospy.logwarn('waiting for darknet action result...')
+        self.darknet_client.wait_for_result()
+        result = self.darknet_client.get_result()  # result is BoundingBoxes message
+        
+        # calculate time taken to classify
+        time_taken = time.time() - t_start
+        
+        # traffic light states in correct order for return code 0 (red), 1(yellow), 2(green)
+        colors = ['red', 'yellow', 'green']
+        
+        # compile valid detections
+        det = [bb.Class for bb in result.bounding_boxes.bounding_boxes if bb.Class in colors]
+        
+        predicted_state = 4
 
-        """
-
-        # Uncomment to show original image.
-        cv2.imshow("Image", image)
-        cv2.waitKey()
-
-        # Crop the input image to a consistent shape.
-        image = cv2.resize(image, (self.crop_size, self.crop_size))
-
-        # Convert the image to HSV and extract the value channel to get the brightest colors.
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        hue, saturation, value = cv2.split(hsv)
-
-        # Threshold image to binary to get only colored pixels.
-        retval, thresholded = cv2.threshold(value,  120, 255, cv2.THRESH_BINARY)
-
-        # Uncomment to show thresholded value channel of HSV image.
-        cv2.imshow("Thresh", thresholded)
-        cv2.waitKey(0)
-
-        # Slice the traffic light to middle top and bottom.
-        top_red = thresholded[self.top_margin: self.crop_size / 3,
-                              self.side_margin: self.crop_size - self.side_margin]
-        middle_yellow = thresholded[self.crop_size / 3: self.crop_size * 2 / 3 ,
-                                    self.side_margin: self.crop_size - self.side_margin]
-        bottom_green = thresholded[self.crop_size * 2 / 3: self.crop_size - self.top_margin,
-                                   self.side_margin :self.crop_size-self.side_margin ]
-
-        # Uncomment to show the binary traffic slices.
-        # cv2.imshow("Red", top_red)
-        # cv2.waitKey(0)
-        # cv2.imshow("Yellow", middle_yellow)
-        # cv2.waitKey(0)
-        # cv2.imshow("Green", bottom_green)
-        # cv2.waitKey(0)
-
-        # Count the non zero pixels in each traffic light slice.
-        count_red = cv2.countNonZero(top_red)
-        count_yellow = cv2.countNonZero(middle_yellow)
-        count_green = cv2.countNonZero(bottom_green)
-        counts = [count_red, count_yellow, count_green]
-
-        # Decide which light color it is by identifying the segment with the most thresholded pixels.
-        max_index = np.argmax(counts)
-        if max_index == 0:
-            return 0 # RED
-        elif max_index == 1:
-            return 1 # YELLOW
-        elif max_index == 2:
-            return 2 # GREEN
+        if len(det)== 0:
+            # if not valid detections return unknown state
+            return TrafficLight.UNKNOWN
         else:
-            return 4 # UNKNOWN
+            # update latest light_state
+            # get the number of detections for each color and sort them
+            counts = [(color, det.count(color)) for color in colors]
+            counts = sorted(counts, key=lambda t: t[1])
+            most_frequent = counts[-1]
+            predicted_state = colors.index(most_frequent[0])
+
+        # transform to message state
+        if predicted_state == 0:
+            #print("Green Light {}".format(score))
+            rospy.loginfo("Classification time: {}, result: {}(RED) Confidence: {}".format(time_taken, predicted_state, most_frequent))
+            return TrafficLight.RED
+        elif predicted_state == 1:
+            #print("Red Light {}".format(score))
+            rospy.loginfo("Classification time: {}, result: {}(YELLOW) Confidence: {}".format(time_taken, predicted_state, most_frequent))
+            return TrafficLight.YELLOW
+        elif predicted_state == 2:
+            #print("Yellow Light {}".format(score))
+            rospy.loginfo("Classification time: {}, result: {}(GREEN) Confidence: {}".format(time_taken, predicted_state, most_frequent))
+            return TrafficLight.GREEN
+
+        # if can't classify then return unknown
+        #return TrafficLight.UNKNOWN
+
+    # -----------------------------------------------------------------------------------------------------
+
+    # function to clean up tensorflow session once ended
+    def __exit__(self, exc_type, exc_val, exc_tb):
+
+        rospy.loginfo('Classifier is ended')
 
