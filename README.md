@@ -135,8 +135,7 @@ A lot of the control and waypoint following for our self-driving car was re-used
 Our team struggled a lot with reproducing controller results in simulation. This is because the Udacity workspace's, the VMs and our personal machines all had different performance specs. If the machine ran slower for any period of time the car would stop following the waypoints and drive out of bounds. This was especially prevalent in the Udacity workspace environemnt. These students experienced similar issues [here](https://knowledge.udacity.com/questions/39086).
 
 ## Results
-The performance of solution in one lap of the simulator was recorded and published on Youtube (https://youtu.be/p0Jgx_Gc7sg).
-The video was accelerated 3x.
+The performance of solution in one lap of the simulator was recorded and published on Youtube (https://youtu.be/GxY2zmptgPI).
 YOLO was trained on around 4000 images for 7000 epochs.
 The same model was tested on track images. A video was recorded and published on Youtube (https://youtu.be/Cov7dlHjFko).
 
