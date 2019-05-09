@@ -13,6 +13,7 @@ import yaml
 import os
 import time
 
+import math
 
 import actionlib
 import darknet_ros_msgs.msg as darknet_msgs
@@ -32,6 +33,7 @@ class TLDetector(object):
         self.lights = []
         #Added
         self.waypoints_2d = None
+
         self.waypoint_tree = None
 
         # wait until subscibers are ready
@@ -176,7 +178,7 @@ class TLDetector(object):
 
         # if there is no image, return UNKNOWN
         if not self.has_image:
-            return 4
+            return TrafficLight.UNKNOWN
 
         t_start = time.time()
         # create darknet goal with received image
@@ -202,13 +204,16 @@ class TLDetector(object):
 
         # if no valid detections, unknown state
         if len(det) == 0:
-            return 4 # UNKNOWN
+            return TrafficLight.UNKNOWN
 
         # get the number of detections for each color and sort them
         counts = [(color, det.count(color)) for color in colors]
         counts = sorted(counts, key=lambda t: t[1])
         most_frequent = counts[-1]
         state_code = colors.index(most_frequent[0])
+
+        # if yellow, then red
+        state_code = TrafficLight.RED if state_code == TrafficLight.YELLOW else state_code
 
         return state_code
         
@@ -247,6 +252,13 @@ class TLDetector(object):
                     closest_light = light
                     line_wp_idx = temp_wp_idx
 
+        # # if traffic light stop > 200m, return unknown
+        # car_x, car_y = self.pose.pose.position.x,self.pose.pose.position.y
+        # tl_x, tl_y = self.waypoints.waypoints[line_wp_idx].pose.pose.position.x, self.waypoints.waypoints[line_wp_idx].pose.pose.position.y
+        # dist = math.sqrt((car_x - tl_x)**2 + (car_y - tl_y)**2)
+        # if dist > 200:
+        #     return line_wp_idx, TrafficLight.UNKNOWN
+        
 
         if closest_light:
             # grab state of traffic light after getting closest light
